@@ -17,7 +17,7 @@ class listener(tweepy.StreamListener):
 
             if hasattr(status,'retweeted_status'):
                 thisMessage=CQBOTmessage(msgtype=1,toGroup=toGroup,user_name=status.user.screen_name)
-                if status.retweeted_status.entities.__contains__('media') and status.entities.__contains__('media'):
+                if status.retweeted_status.entities.__contains__('media'):
                     thisMessage.putPic(str(status.entities['media'][0]['media_url_https']))
                 thisMessage.rawText=rawText
                 thisMessage.transText=transText

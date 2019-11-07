@@ -1,8 +1,8 @@
 import sqlite3,random,re,urllib,hashlib,http
 
-appid = '百度翻译'
-secretKey = '百度翻译'
-path="C:\\Users\\Administrator\\Desktop\\酷Q Pro\\data\\image\\"
+appid = '百度翻译id'
+secretKey = '百度翻译secret'
+path="your coolq image directory path"
 
 def read(user_name:str)->list:
     db=sqlite3.connect('addon//tw.db')
@@ -12,18 +12,18 @@ def read(user_name:str)->list:
     db.close()
     return res
 
-def readall(user_name:str)->list:
+def readall()->list:
     db = sqlite3.connect('addon//tw.db')
     cursor = db.cursor()
-    cursor.execute("SELECT * FROM 'data' WHERE user_name='" + user_name + "'")
+    cursor.execute("SELECT * FROM 'data'")
     res = cursor.fetchall()
     db.close()
     return res
 
-def write(user_name:str,user_id:str,group_id:str,want_retweet:str):
+def write(user_name:str,user_id:str,group_id:str,want_retweet:str,want_comment:str):
     db=sqlite3.connect('addon//tw.db')
     cursor=db.cursor()
-    cursor.execute("INSERT INTO 'data' (user_id,group_id,user_name,want_retweet) VALUES("+user_id+","+group_id+",'"+user_name+"',"+want_retweet+")")
+    cursor.execute("INSERT INTO 'data' (user_id,group_id,user_name,want_retweet,want_comment) VALUES("+user_id+","+group_id+",'"+user_name+"',"+want_retweet+","+want_comment+")")
     db.commit()
     db.close()
 
@@ -36,7 +36,7 @@ def remove(user_name:str):
 
 class CQBOTmessage():
     def __init__(self,msgtype:int,toGroup:int,user_name:str,):
-        self.username=user_name
+        self.user_name=user_name
         self.msgtype=msgtype
         self.toGroup=toGroup
 
@@ -51,7 +51,7 @@ class CQBOTmessage():
 
         self.tweetUrl=""
     def putPic(self,contentPicUrl:str):
-        self.contentPic = True
+        self.contentHasPic = True
         self.contentPicPath = path + self.user_name + "_contentpic.png"
         self.contentPicUrl = contentPicUrl
         self.coolqContentPicSend = '[CQ:image,file=' + self.user_name + '_contentpic.png]'

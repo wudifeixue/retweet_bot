@@ -9,14 +9,31 @@ import nonebot,time,requests,tweepy
 li=listener()
 driver=webdriver.Chrome()
 bot=nonebot.get_bot()
-__c_k__ = 'custom key'
-__c_s__ = 'custom secret'
-__A_T__ = 'access token'
-__A_S__ = 'access secret'
+__c_k__ = 'your costum key'
+__c_s__ = 'your custom secret'
+__A_T__ = 'your access token'
+__A_S__ = 'your access secret'
 auth = tweepy.OAuthHandler(__c_k__, __c_s__)
 auth.set_access_token(__A_T__, __A_S__)
 api = tweepy.API(auth)
 hold=list()
+
+@on_command('help',only_to_me=False)
+async def helpMsg(session:CommandSession):
+    await session.send('stream start 启动bot监听，请勿随意调用，否则会重复发送消息\n'
+                       'stream restart 重启监听流，不知道现在能不能成功\n'
+                       'tell bot出现问题时调用，可以直接发送消息给管理员\n'
+                       'add screen_name;user_id;want_retweet(0或1，0需要，1不需要);want_comment(同上)\n'
+                       '管理员为2267980149')
+
+@on_command('tell',only_to_me=False)
+async def tellAdmin(session:CommandSession):
+    await bot.send_private_msg(user_id=2267980149,message=session.state['msg'])
+
+@tellAdmin.args_parser
+async def _(session:CommandSession):
+    session.state['msg']=session.current_arg_text
+
 
 @on_command('add',only_to_me=False)
 async def add(session:CommandSession):
@@ -24,7 +41,8 @@ async def add(session:CommandSession):
     user_id=session.state['user_id']
     group=str(session.ctx['group_id'])
     want_retweet=session.state['want_retweet']
-    write(user_name,user_id,group,want_retweet)
+    want_comment=session.state['want_comment']
+    write(user_name,user_id,group,want_retweet,want_comment)
     await session.send("加入成功")
 
 @add.args_parser
@@ -34,6 +52,7 @@ async def _(session:CommandSession):
         session.state['user_name']=args[0]
         session.state['user_id']=args[1]
         session.state['want_retweet']=args[2]
+        session.state['want_comment']=args[3]
     except:
         await session.send("参数错误")
 
@@ -77,7 +96,8 @@ async def _():
         if isinstance(thisMessage,CQBOTERRmessage):
             await bot.send_group_msg(group_id=thisMessage.toGroup,message=thisMessage.errmsg)
         elif isinstance(thisMessage,CQBOTmessage):
-            want_retweet=read(thisMessage.username)[3]
+            want_retweet=read(thisMessage.user_name)[3]
+            want_comment=read(thisMessage.user_name)[4]
             sendText=thisMessage.generateText()
             try:
                 driver.get(thisMessage.tweetUrl)
@@ -109,7 +129,7 @@ async def _():
                         await bot.send_group_msg(group_id=thisMessage.toGroup, message=thisMessage.tweetUrl)
                         await bot.send_group_msg(group_id=thisMessage.toGroup, message=sendText)
                 
-                elif thisMessage.msgtype==2:
+                elif thisMessage.msgtype==2 and want_comment==0:
                     try:
                         ele=driver.find_element_by_tag_name("section")
                         cur = driver.find_element_by_css_selector("section>div>div>div>:nth-last-child(2)")
@@ -132,3 +152,5 @@ async def _():
                 await bot.send_group_msg(group_id=thisMessage.toGroup,message="出现其他异常："+str(otherexception))
                 await bot.send_group_msg(group_id=thisMessage.toGroup, message="出错推特链接"+thisMessage.tweetUrl)
         count=count-1
+                        
+                    
