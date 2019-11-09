@@ -9,10 +9,10 @@ import nonebot,time,requests,tweepy
 li=listener()
 driver=webdriver.Chrome()
 bot=nonebot.get_bot()
-__c_k__ = 'your costum key'
-__c_s__ = 'your custom secret'
-__A_T__ = 'your access token'
-__A_S__ = 'your access secret'
+__c_k__ = 'your twitter app custom key'
+__c_s__ = 'your twitter app custom secret'
+__A_T__ = 'your twitter app access tooken'
+__A_S__ = 'your twitter app access secret'
 auth = tweepy.OAuthHandler(__c_k__, __c_s__)
 auth.set_access_token(__A_T__, __A_S__)
 api = tweepy.API(auth)
@@ -72,7 +72,7 @@ async def stream(session:CommandSession):
         print(hold)
         for each in hold:
             each.disconnect()
-            del each
+        hold.clear()
         s=tweepy.Stream(api.auth,li)
         followList = list()
         for each in raw:
@@ -95,6 +95,18 @@ async def _():
         thisMessage=li.messageStack.pop()
         if isinstance(thisMessage,CQBOTERRmessage):
             await bot.send_group_msg(group_id=thisMessage.toGroup,message=thisMessage.errmsg)
+            await bot.send_private_msg(user_id=2267980149,message=thisMessage.errmsg)
+            for each in hold:
+                each.disconnect()
+            hold.clear()
+            s=tweepy.Stream(api.auth,li)
+            raw=readall()
+            followList = list()
+            for each in raw:
+                followList.append(str(each[0]))
+            s.filter(follow=followList,is_async=True)
+            hold.append(s)
+            await bot.send_private_msg(user_id=2267980149,message='自动重启成功')
         elif isinstance(thisMessage,CQBOTmessage):
             want_retweet=read(thisMessage.user_name)[3]
             want_comment=read(thisMessage.user_name)[4]

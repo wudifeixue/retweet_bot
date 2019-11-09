@@ -1,8 +1,8 @@
 import sqlite3,random,re,urllib,hashlib,http
 
-appid = '百度翻译id'
-secretKey = '百度翻译secret'
-path="your coolq image directory path"
+appid = 'baidu translate app id'
+secretKey = 'biadu translate secret'
+path="C:\\Users\\Administrator\\Desktop\\酷Q Pro\\data\\image\\"
 
 def read(user_name:str)->list:
     db=sqlite3.connect('addon//tw.db')
