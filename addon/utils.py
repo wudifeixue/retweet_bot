@@ -1,38 +1,60 @@
-import sqlite3,random,re,urllib,hashlib,http
+import random,re,urllib,hashlib,http,json
 
-appid = 'baidu translate app id'
-secretKey = 'biadu translate secret'
-path="C:\\Users\\Administrator\\Desktop\\酷Q Pro\\data\\image\\"
+appid = '20190910000333380'
+secretKey = 'WUEPn0GijwpNBO28oSbN'
+path = "C:\\Users\\Administrator\\Desktop\\酷Q Pro\\data\\image\\"
 
-def read(user_name:str)->list:
-    db=sqlite3.connect('addon//tw.db')
-    cursor=db.cursor()
-    cursor.execute("SELECT * FROM 'data' WHERE user_name='"+user_name+"'")
-    res=cursor.fetchone()
-    db.close()
-    return res
 
-def readall()->list:
-    db = sqlite3.connect('addon//tw.db')
-    cursor = db.cursor()
-    cursor.execute("SELECT * FROM 'data'")
-    res = cursor.fetchall()
-    db.close()
-    return res
+def config_operator(operate:int, **kwargs):
+    #add user 0;update retweet 1;update comment 2;read group 3;read all id 4;read config 5
+    if operate == 0:
+        setting_file = 'settings\\' + kwargs['user_name'] + '.json'
+        config = {
+            'name': kwargs['user_name'],
+            'id': kwargs['user_id'],
+            'group': kwargs['to_group'],
+            'retweet': kwargs['want_retweet'],
+            'comment': kwargs['want_comment']
+        }
+        with open(setting_file,'w') as f:
+            json.dump(config, f, indent=1)
+        with open('settings\\index.txt', 'r+') as f:
+            buf = f.read()
+            buf = buf.split(';')
+            buf.pop()
+            if str(kwargs['user_id']) not in buf:
+                f.write(str(kwargs['user_id']) + ';')
+    elif operate == 1:
+        setting_file = 'settings\\' + kwargs['user_name'] + '.json'
+        with open(setting_file,'r') as f:
+            buf=json.load(f)
+        buf['retweet']=kwargs['want_retweet']
+        with open(setting_file,'w') as f:
+            json.dump(buf, f, indent=1)
+    elif operate == 2:
+        setting_file = 'settings\\' + kwargs['user_name'] + '.json'
+        with open(setting_file, 'r') as f:
+            buf = json.load(f)
+        buf['comment'] = kwargs['want_comment']
+        with open(setting_file, 'w') as f:
+            json.dump(buf, f, indent=1)
+    elif operate == 3:
+        setting_file = 'settings\\' + kwargs['user_name'] + '.json'
+        with open(setting_file, 'r') as f:
+            buf = json.load(f)
+        return buf['group']
+    elif operate == 4:
+        with open('settings\\index.txt','r') as f:
+            buf = f.read()
+        buf = buf.split(';')
+        buf.pop()
+        return buf
+    elif operate == 5:
+        setting_file = 'settings\\' + kwargs['user_name'] + '.json'
+        with open(setting_file, 'r') as f:
+            buf = json.load(f)
+        return str(buf['retweet'])+';'+str(buf['comment'])
 
-def write(user_name:str,user_id:str,group_id:str,want_retweet:str,want_comment:str):
-    db=sqlite3.connect('addon//tw.db')
-    cursor=db.cursor()
-    cursor.execute("INSERT INTO 'data' (user_id,group_id,user_name,want_retweet,want_comment) VALUES("+user_id+","+group_id+",'"+user_name+"',"+want_retweet+","+want_comment+")")
-    db.commit()
-    db.close()
-
-def remove(user_name:str):
-    db = sqlite3.connect('addon//tw.db')
-    cursor = db.cursor()
-    cursor.execute("DELETE FROM 'data' WHERE user_name='" + user_name + "'")
-    db.commit()
-    db.close()
 
 class CQBOTmessage():
     def __init__(self,msgtype:int,toGroup:int,user_name:str,):
@@ -63,6 +85,7 @@ class CQBOTERRmessage():
     def __init__(self,errmsg:str):
         self.errmsg=errmsg
         self.toGroup=681345620
+
 
 def trans(transstr:str):
     httpClient = None

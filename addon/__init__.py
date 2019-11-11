@@ -1,7 +1,7 @@
 from .tweetListener import listener
-from .utils import readall,read,write,CQBOTERRmessage,CQBOTmessage
+from .utils import CQBOTERRmessage,CQBOTmessage,config_operator
 from selenium import webdriver,common
-from nonebot import on_command,CommandSession
+from nonebot import on_command,CommandSession,on_request,RequestSession
 from aiocqhttp.exceptions import ActionFailed
 
 import nonebot,time,requests,tweepy
@@ -9,26 +9,57 @@ import nonebot,time,requests,tweepy
 li=listener()
 driver=webdriver.Chrome()
 bot=nonebot.get_bot()
-__c_k__ = 'your twitter app custom key'
-__c_s__ = 'your twitter app custom secret'
-__A_T__ = 'your twitter app access tooken'
-__A_S__ = 'your twitter app access secret'
+__c_k__ = 'RgIKD6VSZG9H403HzZry13pD5'
+__c_s__ = 'kmpttSb4wSoibWxP1QQc0oCekJqyblR9UuvqzyrTzH4XcyA5xP'
+__A_T__ = '1166612812510171136-H5lHwqZYR65KzgpAymbueMsDYvFYwr'
+__A_S__ = 'DSBKEpYgTSwPUmkHnI4E6nAdm2BxC12YyxkeXPiMMGRvW'
 auth = tweepy.OAuthHandler(__c_k__, __c_s__)
 auth.set_access_token(__A_T__, __A_S__)
 api = tweepy.API(auth)
-hold=list()
+hold = list()
+
+
+@on_command('adjust',only_to_me=False)
+async def adj(session:CommandSession):
+    if session.state['op']=='retweet':
+        config_operator(1, user_name=session.state['user_name'], want_retweet=session.state['value'])
+    elif session.state['op']=='comment':
+        config_operator(2, user_name=session.state['user_name'], want_retweet=session.state['value'])
+    await session.send('成功')
+
+
+@adj.args_parser
+async def _(session:CommandSession):
+    raw=session.current_arg_text
+    buf=raw.split(';')
+    session.state['op']=buf[0]
+    session.state['user_name']=buf[1]
+    session.state['value']=buf[2]
+
+
+@on_request('friend')
+async def _(session:RequestSession):
+    session.approve()
+
+
+@on_request('group')
+async def _(session:RequestSession):
+    session.approve()
+    await session.send('#help获取更多信息')
+    await bot.send_private_msg(user_id=2267980149,message='加入群聊'+session.ctx['group_id'])
+
 
 @on_command('help',only_to_me=False)
 async def helpMsg(session:CommandSession):
-    await session.send('stream start 启动bot监听，请勿随意调用，否则会重复发送消息\n'
-                       'stream restart 重启监听流，不知道现在能不能成功\n'
-                       'tell bot出现问题时调用，可以直接发送消息给管理员\n'
-                       'add screen_name;user_id;want_retweet(0或1，0需要，1不需要);want_comment(同上)\n'
-                       '管理员为2267980149')
+    with open('help.txt','r',encoding='utf-8') as f:
+        msg=f.read()
+    await session.send(msg)
+
 
 @on_command('tell',only_to_me=False)
 async def tellAdmin(session:CommandSession):
     await bot.send_private_msg(user_id=2267980149,message=session.state['msg'])
+
 
 @tellAdmin.args_parser
 async def _(session:CommandSession):
@@ -37,56 +68,49 @@ async def _(session:CommandSession):
 
 @on_command('add',only_to_me=False)
 async def add(session:CommandSession):
-    user_name=session.state['user_name']
-    user_id=session.state['user_id']
-    group=str(session.ctx['group_id'])
-    want_retweet=session.state['want_retweet']
-    want_comment=session.state['want_comment']
-    write(user_name,user_id,group,want_retweet,want_comment)
+    config_operator(0, user_id=session.state['user_id'], user_name=session.state['user_name'],
+                    group_id=session.ctx['group_id'], want_retweet=str(session.state['want_retweet']),
+                    want_comment=str(session.state['want_comment']))
     await session.send("加入成功")
+
 
 @add.args_parser
 async def _(session:CommandSession):
     try:
         args=session.current_arg_text.split(';')
-        session.state['user_name']=args[0]
-        session.state['user_id']=args[1]
+        session.state['user_id']=args[0]
+        session.state['user_name']=args[1]
         session.state['want_retweet']=args[2]
         session.state['want_comment']=args[3]
     except:
         await session.send("参数错误")
 
+
 @on_command('stream',only_to_me=False)
 async def stream(session:CommandSession):
-    raw=readall()
+    followList=config_operator(4)
+    print(followList)
     if session.state['pos']=="start":
         s=tweepy.Stream(api.auth,li)
-        followList=list()
-        for each in raw:
-            followList.append(str(each[0]))
-        print(followList)
         s.filter(follow=followList,is_async=True)
         hold.append(s)
         await session.send("成功")
     elif session.state['pos']=='restart':
-        print(hold)
         for each in hold:
             each.disconnect()
         hold.clear()
         s=tweepy.Stream(api.auth,li)
-        followList = list()
-        for each in raw:
-            followList.append(str(each[0]))
-        print(followList)
         s.filter(follow=followList,is_async=True)
         hold.append(s)
         await session.send("成功")
+
 
 @stream.args_parser
 async def _(session:CommandSession):
     session.state['pos']=session.current_arg_text
 
-@nonebot.scheduler.scheduled_job('interval',seconds=60)
+
+@nonebot.scheduler.scheduled_job('interval', seconds=60)
 async def _():
     count=len(li.messageStack)
     if count>6:
@@ -94,23 +118,21 @@ async def _():
     while count>0:
         thisMessage=li.messageStack.pop()
         if isinstance(thisMessage,CQBOTERRmessage):
-            await bot.send_group_msg(group_id=thisMessage.toGroup,message=thisMessage.errmsg)
-            await bot.send_private_msg(user_id=2267980149,message=thisMessage.errmsg)
+            await bot.send_group_msg(group_id=thisMessage.toGroup, message=thisMessage.errmsg)
+            await bot.send_private_msg(user_id=2267980149, message=thisMessage.errmsg)
             for each in hold:
                 each.disconnect()
             hold.clear()
             s=tweepy.Stream(api.auth,li)
-            raw=readall()
-            followList = list()
-            for each in raw:
-                followList.append(str(each[0]))
-            s.filter(follow=followList,is_async=True)
+            followList = config_operator(4)
+            s.filter(follow=followList, is_async=True)
             hold.append(s)
             await bot.send_private_msg(user_id=2267980149,message='自动重启成功')
         elif isinstance(thisMessage,CQBOTmessage):
-            want_retweet=read(thisMessage.user_name)[3]
-            want_comment=read(thisMessage.user_name)[4]
-            sendText=thisMessage.generateText()
+            config=config_operator(5,user_name=thisMessage.user_name).split(';')
+            want_retweet = int(config[0])
+            want_comment = int(config[1])
+            sendText = thisMessage.generateText()
             try:
                 driver.get(thisMessage.tweetUrl)
                 driver.maximize_window()
@@ -163,6 +185,4 @@ async def _():
             except Exception as otherexception:
                 await bot.send_group_msg(group_id=thisMessage.toGroup,message="出现其他异常："+str(otherexception))
                 await bot.send_group_msg(group_id=thisMessage.toGroup, message="出错推特链接"+thisMessage.tweetUrl)
-        count=count-1
-                        
-                    
+        count = count-1
