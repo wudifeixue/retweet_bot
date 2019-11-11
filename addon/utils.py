@@ -1,8 +1,8 @@
-import random,re,urllib,hashlib,http,json
+import random,re,urllib,hashlib,http,json,os
 
-appid = '20190910000333380'
-secretKey = 'WUEPn0GijwpNBO28oSbN'
-path = "C:\\Users\\Administrator\\Desktop\\酷Q Pro\\data\\image\\"
+appid = 'baidu trans appid'
+secretKey = 'baidu trans secret'
+path = "你的酷Qimage文件夹路径"
 
 
 def config_operator(operate:int, **kwargs):
@@ -12,37 +12,51 @@ def config_operator(operate:int, **kwargs):
         config = {
             'name': kwargs['user_name'],
             'id': kwargs['user_id'],
-            'group': kwargs['to_group'],
-            'retweet': kwargs['want_retweet'],
-            'comment': kwargs['want_comment']
+            'groups': kwargs['group_config']
         }
-        with open(setting_file,'w') as f:
-            json.dump(config, f, indent=1)
-        with open('settings\\index.txt', 'r+') as f:
-            buf = f.read()
-            buf = buf.split(';')
-            buf.pop()
-            if str(kwargs['user_id']) not in buf:
-                f.write(str(kwargs['user_id']) + ';')
+        if not os.path.exists(setting_file):
+            with open(setting_file, 'w') as f:
+                json.dump(config, f, indent=1)
+            with open('settings\\index.txt', 'r+') as f:
+                buf = f.read()
+                buf = buf.split(';')
+                buf.pop()
+                if str(kwargs['user_id']) not in buf:
+                    f.write(str(kwargs['user_id']) + ';')
+        else:
+            with open(setting_file, 'r') as f:
+                present = json.load(f)
+            print(present['groups'])
+            present['groups'].append(config['groups'][0])
+            with open(setting_file, 'w') as f:
+                json.dump(present, f, indent=1)
+
     elif operate == 1:
         setting_file = 'settings\\' + kwargs['user_name'] + '.json'
         with open(setting_file,'r') as f:
             buf=json.load(f)
-        buf['retweet']=kwargs['want_retweet']
+        for each in buf['groups']:
+            if each['id']==kwargs['group_id']:
+                each['retweet']=kwargs['want_retweet']
         with open(setting_file,'w') as f:
             json.dump(buf, f, indent=1)
     elif operate == 2:
         setting_file = 'settings\\' + kwargs['user_name'] + '.json'
         with open(setting_file, 'r') as f:
             buf = json.load(f)
-        buf['comment'] = kwargs['want_comment']
+        for each in buf['groups']:
+            if each['id'] == kwargs['group_id']:
+                each['comment']=kwargs['want_comment']
         with open(setting_file, 'w') as f:
             json.dump(buf, f, indent=1)
     elif operate == 3:
         setting_file = 'settings\\' + kwargs['user_name'] + '.json'
         with open(setting_file, 'r') as f:
             buf = json.load(f)
-        return buf['group']
+            res=list()
+            for each in buf['groups']:
+                res.append(each['id'])
+        return res
     elif operate == 4:
         with open('settings\\index.txt','r') as f:
             buf = f.read()
@@ -53,11 +67,13 @@ def config_operator(operate:int, **kwargs):
         setting_file = 'settings\\' + kwargs['user_name'] + '.json'
         with open(setting_file, 'r') as f:
             buf = json.load(f)
-        return str(buf['retweet'])+';'+str(buf['comment'])
+            for each in buf['groups']:
+                if each['id'] == kwargs['group_id']:
+                    return each
 
 
 class CQBOTmessage():
-    def __init__(self,msgtype:int,toGroup:int,user_name:str,):
+    def __init__(self,msgtype:int,toGroup:list,user_name:str):
         self.user_name=user_name
         self.msgtype=msgtype
         self.toGroup=toGroup
@@ -84,7 +100,6 @@ class CQBOTmessage():
 class CQBOTERRmessage():
     def __init__(self,errmsg:str):
         self.errmsg=errmsg
-        self.toGroup=681345620
 
 
 def trans(transstr:str):
