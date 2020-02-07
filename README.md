@@ -1,6 +1,6 @@
 # retweet_bot
 基于nonebot的转推机器人，能够自动实现发送截图，原文与翻译的功能  
-开发环境是windows x64，python版本3.7，pip 安装nonebot,selenium,tweepy，需要酷Q Pro实现发送图片功能  
+开发环境是windows x64，python版本3.7，pip 安装nonebot,splinter,tweepy，需要酷Q Pro实现发送图片功能  
 开发者$sudo,SoreHaits
 
 **使用说明**  
