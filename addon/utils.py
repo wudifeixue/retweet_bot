@@ -1,105 +1,52 @@
-import random,re,urllib,hashlib,http,json,os
+import requests
+import random,re,urllib,hashlib,http
 
-appid = 'baidu trans appid'
-secretKey = 'baidu trans secret'
-path = "你的酷Qimage文件夹路径"
+appid = 'baidu translation app id'
+secretKey = 'baidu translation secret key'
 
-
-def config_operator(operate:int, **kwargs):
-    #add user 0;update retweet 1;update comment 2;read group 3;read all id 4;read config 5
-    if operate == 0:
-        setting_file = 'settings\\' + kwargs['user_name'] + '.json'
-        config = {
-            'name': kwargs['user_name'],
-            'id': kwargs['user_id'],
-            'groups': kwargs['group_config']
-        }
-        if not os.path.exists(setting_file):
-            with open(setting_file, 'w') as f:
-                json.dump(config, f, indent=1)
-            with open('settings\\index.txt', 'r+') as f:
-                buf = f.read()
-                buf = buf.split(';')
-                buf.pop()
-                if str(kwargs['user_id']) not in buf:
-                    f.write(str(kwargs['user_id']) + ';')
-        else:
-            with open(setting_file, 'r') as f:
-                present = json.load(f)
-            print(present['groups'])
-            present['groups'].append(config['groups'][0])
-            with open(setting_file, 'w') as f:
-                json.dump(present, f, indent=1)
-
-    elif operate == 1:
-        setting_file = 'settings\\' + kwargs['user_name'] + '.json'
-        with open(setting_file,'r') as f:
-            buf=json.load(f)
-        for each in buf['groups']:
-            if each['id']==kwargs['group_id']:
-                each['retweet']=kwargs['want_retweet']
-        with open(setting_file,'w') as f:
-            json.dump(buf, f, indent=1)
-    elif operate == 2:
-        setting_file = 'settings\\' + kwargs['user_name'] + '.json'
-        with open(setting_file, 'r') as f:
-            buf = json.load(f)
-        for each in buf['groups']:
-            if each['id'] == kwargs['group_id']:
-                each['comment']=kwargs['want_comment']
-        with open(setting_file, 'w') as f:
-            json.dump(buf, f, indent=1)
-    elif operate == 3:
-        setting_file = 'settings\\' + kwargs['user_name'] + '.json'
-        with open(setting_file, 'r') as f:
-            buf = json.load(f)
-            res=list()
-            for each in buf['groups']:
-                res.append(each['id'])
-        return res
-    elif operate == 4:
-        with open('settings\\index.txt','r') as f:
-            buf = f.read()
-        buf = buf.split(';')
-        buf.pop()
-        return buf
-    elif operate == 5:
-        setting_file = 'settings\\' + kwargs['user_name'] + '.json'
-        with open(setting_file, 'r') as f:
-            buf = json.load(f)
-            for each in buf['groups']:
-                if each['id'] == kwargs['group_id']:
-                    return each
+class MSG:
+    #1,发推
+    #2,转推
+    #3,评论
+    msg_type=0
+    msg_url=''
+    msg_txt=''
+    msg_txt_translated=''
+    msg_sender=''
+    msg_id=''
+    msg_has_pic=False
+    def __init__(self,msg_txt:str,msg_sender:str,msg_id:str,msg_url:str):
+        self.msg_txt=msg_txt
+        self.msg_txt_translated=trans(msg_txt)
+        self.msg_sender=msg_sender
+        self.msg_id=msg_id
+        self.msg_url=msg_url
+    def add_pic_info_to_msg(self,pic_url:list,pic_cqcode:list):
+        self.msg_has_pic=True
+        self.pic_url=pic_url
+        self.pic_cqcode=pic_cqcode
 
 
-class CQBOTmessage():
-    def __init__(self,msgtype:int,toGroup:list,user_name:str):
-        self.user_name=user_name
-        self.msgtype=msgtype
-        self.toGroup=toGroup
+class ERRMSG:
+    txt=''
 
-        self.rawText=""
-        self.transText=""
-
-        self.screenshotPath = path + self.user_name + ".png"
-        self.coolqScreenshotSend = '[CQ:image,file=' + self.user_name + '.png]'
-
-        self.contentHasPic=False
-        self.contentPicUrl=""
-
-        self.tweetUrl=""
-    def putPic(self,contentPicUrl:str):
-        self.contentHasPic = True
-        self.contentPicPath = path + self.user_name + "_contentpic.png"
-        self.contentPicUrl = contentPicUrl
-        self.coolqContentPicSend = '[CQ:image,file=' + self.user_name + '_contentpic.png]'
-    def generateText(self)->str:
-        return "原文："+self.rawText+"\n翻译："+self.transText
+    def __init__(self,txt:str):
+        self.txt=txt
 
 
-class CQBOTERRmessage():
-    def __init__(self,errmsg:str):
-        self.errmsg=errmsg
+def get_pic(urls:list,prefix:str):
+    count=0
+    cqcodes=list()
+    for url in urls:
+        pic=requests.get(url)
+        suffix=str(url).split('.').pop()
+        if count==0:
+            p=open('cache\\'+prefix+'_'+str(count)+suffix,'w')
+        with open('cache\\'+prefix+'_'+str(count)+suffix,'wb') as f:
+            f.write(pic.content)
+            cqcodes.append('[CQ:image,file=file:///C:\\Users\\Administrator\\Desktop\\RTBOT\\'+'cache\\'+prefix+'_'+str(count)+suffix+']')
+        count+=1
+    return cqcodes
 
 
 def trans(transstr:str):
@@ -128,7 +75,7 @@ def trans(transstr:str):
         result = resultr.replace(r'\/', r'/')
         return result
     except Exception as eb:
-        return eb
+        return '翻译api超速，获取失败'
     finally:
         if httpClient:
             httpClient.close()
